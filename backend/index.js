@@ -183,11 +183,9 @@ app.post("/users", async (req, res) => {
 
     // Simple validation
     if (!username || !email || !password) {
-      return res
-        .status(400)
-        .json({
-          message: "Missing required fields: username, email, or password.",
-        });
+      return res.status(400).json({
+        message: "Missing required fields: username, email, or password.",
+      });
     }
 
     // Ensure the email is unique
@@ -223,6 +221,41 @@ app.post("/users", async (req, res) => {
   } catch (error) {
     console.error("Error adding user:", error);
     res.status(500).json({ message: "Error adding user." });
+  }
+});
+
+// User login
+app.post("/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Validate input
+    if (!email || !password) {
+      return res
+        .status(400)
+        .json({ message: "Email and password are required." });
+    }
+
+    // Find user by email
+    const userCollection = client.db("collectionprojectdb").collection("users");
+    const user = await userCollection.findOne({ email });
+
+    if (!user) {
+      return res.status(401).json({ message: "Invalid email or password." });
+    }
+
+    // Compare passwords
+    const isMatch = await bcrypt.compare(password, user.password);
+
+    if (!isMatch) {
+      return res.status(401).json({ message: "Invalid email or password." });
+    }
+
+    // Send a response indicating successful login
+    res.json({ message: "Login successful" });
+  } catch (error) {
+    console.error("Error logging in:", error);
+    res.status(500).json({ message: "Error logging in." });
   }
 });
 

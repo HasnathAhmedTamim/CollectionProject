@@ -10,59 +10,61 @@ import { AuthContext } from "../../providers/AuthProvider";
 import SocialLogin from "../SocialLogin";
 
 const SignUp = () => {
-  const axiosPublic = useAxiosPublic();
+  const axiosPublic = useAxiosPublic(); // Custom hook for handling Axios requests
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm();
-  const { createUser, user } = useContext(AuthContext);
+  const { createUser, user } = useContext(AuthContext); // Firebase Auth context
   const navigate = useNavigate();
 
-  const onSubmit = (data) => {
-    console.log(data);
-    createUser(data.email, data.password)
-      .then((result) => {
-        const loggedUser = result.user;
-        console.log(loggedUser);
-        return updateProfile(loggedUser, {
-          displayName: data.username,
-        }).then(() => {
-          const userInfo = {
-            name: data.username,
-            email: data.email,
-            uid: loggedUser.uid,
-            creationTime: loggedUser.metadata.creationTime,
-            lastLoginAt: loggedUser.metadata.lastSignInTime,
-            status: "active", // Set the default status to "active"
-          };
-          axiosPublic.post("/users", userInfo).then((res) => {
-            if (res.data.insertedId) {
-              console.log("User added to database");
-              Swal.fire({
-                icon: "success",
-                title: "Account Created",
-                text: `Welcome, ${data.username}! Your account has been successfully created.`,
-              }).then(() => {
-                navigate("/"); // Redirect to home page after showing the success message
-              });
-            }
-          });
-        });
-      })
-      .catch((error) => {
-        console.error("Error creating user:", error);
-        Swal.fire({
-          icon: "error",
-          title: "Account Creation Failed",
-          text: error.message,
-        });
+  const onSubmit = async (data) => {
+    try {
+      // Create user with Firebase Authentication
+      const result = await createUser(data.email, data.password);
+      const loggedUser = result.user;
+
+      // Update user profile with Firebase
+      await updateProfile(loggedUser, {
+        displayName: data.username,
       });
+
+      // Prepare user info for backend
+      const userInfo = {
+        name: data.username,
+        email: data.email,
+        uid: loggedUser.uid,
+        creationTime: loggedUser.metadata.creationTime,
+        lastLoginAt: loggedUser.metadata.lastSignInTime,
+        status: "active", // Default status
+      };
+
+      // Send user info to backend
+      const res = await axiosPublic.post("/users", userInfo);
+
+      if (res.data.insertedId) {
+        Swal.fire({
+          icon: "success",
+          title: "Account Created",
+          text: `Welcome, ${data.username}! Your account has been successfully created.`,
+        }).then(() => {
+          navigate("/"); // Redirect to home page
+        });
+      }
+    } catch (error) {
+      console.error("Error creating user:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Account Creation Failed",
+        text: error.message,
+      });
+    }
   };
 
   useEffect(() => {
     if (user) {
-      navigate("/"); // Redirect to home page if the user is already logged in
+      navigate("/"); // Redirect to home page if already logged in
     }
   }, [user, navigate]);
 
