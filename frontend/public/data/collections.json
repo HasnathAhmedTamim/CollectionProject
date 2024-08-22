@@ -1,0 +1,14 @@
+[
+  {
+    "id": "1",
+    "name": "Collection 1",
+    "description": "Description for Collection 1",
+    "customFields": ["Field1", "Field2"]
+  },
+  {
+    "id": "2",
+    "name": "Collection 2",
+    "description": "Description for Collection 2",
+    "customFields": ["FieldA", "FieldB"]
+  }
+]
