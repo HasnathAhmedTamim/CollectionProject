@@ -1,4 +1,5 @@
-import { createContext, useEffect, useState } from "react";
+// src/providers/AuthProvider.jsx
+import React, { createContext, useEffect, useState } from "react";
 import {
   createUserWithEmailAndPassword,
   getAuth,
@@ -17,6 +18,7 @@ const auth = getAuth(app);
 const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false); // Add isAdmin state
 
   const createUser = (email, password) => {
     setLoading(true);
@@ -61,8 +63,12 @@ const AuthProvider = ({ children }) => {
           email: currentUser.email,
           displayName: currentUser.displayName,
         });
+        // Set isAdmin based on your logic (e.g., checking user roles from a database)
+        // For example:
+        // setIsAdmin(currentUser.email === 'admin@example.com'); // Example logic
       } else {
         setUser(null);
+        setIsAdmin(false);
       }
       setLoading(false);
     });
@@ -74,6 +80,7 @@ const AuthProvider = ({ children }) => {
   const authInfo = {
     user,
     loading,
+    isAdmin, // Provide isAdmin state
     createUser,
     signIn,
     googleSignIn,

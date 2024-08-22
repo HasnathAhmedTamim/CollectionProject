@@ -1,16 +1,15 @@
+// src/pages/SignUp.jsx
 import { useContext, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
-
 import { updateProfile } from "firebase/auth";
 import Swal from "sweetalert2";
 import useAxiosPublic from "../../hooks/useAxiosPublic";
-
 import { AuthContext } from "../../providers/AuthProvider";
 import SocialLogin from "../SocialLogin";
 
 const SignUp = () => {
-  const axiosPublic = useAxiosPublic(); // Custom hook for handling Axios requests
+  const axiosPublic = useAxiosPublic(); // Use the custom Axios hook
   const {
     register,
     handleSubmit,
@@ -43,7 +42,7 @@ const SignUp = () => {
       // Send user info to backend
       const res = await axiosPublic.post("/users", userInfo);
 
-      if (res.data.insertedId) {
+      if (res.status === 201) {
         Swal.fire({
           icon: "success",
           title: "Account Created",
@@ -103,13 +102,7 @@ const SignUp = () => {
               Email
             </label>
             <input
-              {...register("email", {
-                required: "Email is required",
-                pattern: {
-                  value: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/,
-                  message: "Invalid email address",
-                },
-              })}
+              {...register("email", { required: "Email is required" })}
               type="email"
               id="email"
               className="w-full px-3 py-2 mt-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -129,13 +122,7 @@ const SignUp = () => {
               Password
             </label>
             <input
-              {...register("password", {
-                required: "Password is required",
-                minLength: {
-                  value: 6,
-                  message: "Password must be at least 6 characters long",
-                },
-              })}
+              {...register("password", { required: "Password is required" })}
               type="password"
               id="password"
               className="w-full px-3 py-2 mt-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -154,16 +141,7 @@ const SignUp = () => {
             Sign Up
           </button>
         </form>
-        <div className="mt-6 text-center">
-          <p className="text-gray-600">Or sign up with</p>
-          <SocialLogin />
-        </div>
-        <p className="mt-6 text-center text-gray-600">
-          Already have an account?{" "}
-          <a href="/login" className="text-green-500 hover:underline">
-            Login here
-          </a>
-        </p>
+        <SocialLogin />
       </div>
     </div>
   );

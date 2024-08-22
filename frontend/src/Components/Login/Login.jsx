@@ -1,8 +1,10 @@
+// src/pages/Login.jsx
 import { useContext, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import { AuthContext } from "../../providers/AuthProvider";
+import useAxiosPublic from "../../hooks/useAxiosPublic";
 import SocialLogin from "../SocialLogin";
 
 const Login = () => {
@@ -14,25 +16,19 @@ const Login = () => {
   const { signIn, user } = useContext(AuthContext);
   const navigate = useNavigate();
   const [isSignup, setIsSignup] = useState(false);
+  const axiosPublic = useAxiosPublic(); // Use the custom Axios hook
 
   const onSubmit = async (data) => {
     try {
       if (isSignup) {
         // Signup logic
-        const response = await fetch("http://localhost:5000/users", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            username: data.username,
-            email: data.email,
-            password: data.password,
-          }),
+        const response = await axiosPublic.post("/users", {
+          username: data.username,
+          email: data.email,
+          password: data.password,
         });
-        const result = await response.json();
 
-        if (response.ok) {
+        if (response.status === 201) {
           Swal.fire({
             icon: "success",
             title: "Signup Successful",
@@ -43,7 +39,7 @@ const Login = () => {
           Swal.fire({
             icon: "error",
             title: "Signup Failed",
-            text: result.message,
+            text: response.data.message,
           });
         }
       } else {
@@ -51,7 +47,6 @@ const Login = () => {
         signIn(data.email, data.password)
           .then((result) => {
             const loggedUser = result.user;
-            console.log(loggedUser);
             Swal.fire({
               icon: "success",
               title: "Login Successful",

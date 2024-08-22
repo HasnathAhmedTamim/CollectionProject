@@ -3,6 +3,8 @@ const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config(); // Load environment variables from .env file
 const bcrypt = require("bcrypt"); // For password hashing
+const multer = require("multer"); // For handling file uploads
+const path = require("path");
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -10,6 +12,20 @@ const port = process.env.PORT || 5000;
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.static("public")); // Serve static files from the "public" directory
+
+// Multer setup
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "public/uploads"); // Directory where uploaded files will be saved
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const filename = Date.now() + ext; // Unique filename
+    cb(null, filename);
+  },
+});
+const upload = multer({ storage });
 
 // MongoDB URI
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.o8mpxcb.mongodb.net/collectionprojectdb?retryWrites=true&w=majority`;
@@ -140,6 +156,90 @@ app.get("/collections/:id", async (req, res) => {
     res.status(500).json({ message: "Error fetching collection." });
   }
 });
+// Add an item to a collection
+app.post("/collections/:collectionId/items", upload.single("image"), async (req, res) => {
+  try {
+    const { collectionId } = req.params;
+    const { name, description, tags } = req.body;
+    const image = req.file ? req.file.filename : null;
+
+    if (!ObjectId.isValid(collectionId)) {
+      return res.status(400).json({ message: "Invalid collection ID format." });
+    }
+
+    // Validate input
+    if (!name || !description) {
+      return res.status(400).json({
+        message: "Missing required fields: name or description.",
+      });
+    }
+
+    // Create the item object
+    const newItem = {
+      name,
+      description,
+      tags: tags ? tags.split(",").map((tag) => tag.trim()) : [],
+      image,
+    };
+
+    // Update the collection with the new item
+    const result = await client
+      .db("collectionprojectdb")
+      .collection("collections")
+      .updateOne(
+        { _id: new ObjectId(collectionId) },
+        { $push: { items: newItem } }
+      );
+
+    if (result.modifiedCount === 0) {
+      return res.status(404).json({ message: "Collection not found or item not added." });
+    }
+
+    res.status(201).json({ message: "Item added successfully." });
+  } catch (error) {
+    console.error("Error adding item:", error);
+    res.status(500).json({ message: "Error adding item." });
+  }
+});
+
+
+// Create a new collection
+app.post("/collections", upload.single("image"), async (req, res) => {
+  try {
+    const { name, description, tags, author, createdAt } = req.body;
+    const image = req.file ? req.file.filename : null;
+
+    // Validate input
+    if (!name || !description || !author || !createdAt) {
+      return res.status(400).json({
+        message:
+          "Missing required fields: name, description, author, or createdAt.",
+      });
+    }
+
+    // Create the collection object
+    const newCollection = {
+      name,
+      description,
+      tags: tags ? tags.split(",").map((tag) => tag.trim()) : [],
+      author,
+      createdAt: new Date(createdAt),
+      image,
+    };
+
+    // Insert the new collection into the database
+    const result = await client
+      .db("collectionprojectdb")
+      .collection("collections")
+      .insertOne(newCollection);
+
+    // Send a response with the inserted collection ID
+    res.status(201).json({ ...newCollection, id: result.insertedId });
+  } catch (error) {
+    console.error("Error creating collection:", error);
+    res.status(500).json({ message: "Error creating collection." });
+  }
+});
 
 // Get all users
 app.get("/users", async (req, res) => {
@@ -217,98 +317,15 @@ app.post("/users", async (req, res) => {
       .insertOne(newUser);
 
     // Send a response with the inserted user ID
-    res.status(201).json({ id: result.insertedId });
+    res.status(201).json({ ...newUser, id: result.insertedId });
   } catch (error) {
-    console.error("Error adding user:", error);
-    res.status(500).json({ message: "Error adding user." });
+    console.error("Error creating user:", error);
+    res.status(500).json({ message: "Error creating user." });
   }
 });
 
-// User login
-app.post("/login", async (req, res) => {
-  try {
-    const { email, password } = req.body;
-
-    // Validate input
-    if (!email || !password) {
-      return res
-        .status(400)
-        .json({ message: "Email and password are required." });
-    }
-
-    // Find user by email
-    const userCollection = client.db("collectionprojectdb").collection("users");
-    const user = await userCollection.findOne({ email });
-
-    if (!user) {
-      return res.status(401).json({ message: "Invalid email or password." });
-    }
-
-    // Compare passwords
-    const isMatch = await bcrypt.compare(password, user.password);
-
-    if (!isMatch) {
-      return res.status(401).json({ message: "Invalid email or password." });
-    }
-
-    // Send a response indicating successful login
-    res.json({ message: "Login successful" });
-  } catch (error) {
-    console.error("Error logging in:", error);
-    res.status(500).json({ message: "Error logging in." });
-  }
-});
-
-// Add a comment to an item
-app.post("/items/:id/comments", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { author, text } = req.body;
-
-    if (!ObjectId.isValid(id)) {
-      return res.status(400).json({ message: "Invalid ID format." });
-    }
-
-    const itemCollection = client.db("collectionprojectdb").collection("items");
-    const item = await itemCollection.findOne({ _id: new ObjectId(id) });
-
-    if (!item) {
-      return res.status(404).json({ message: "Item not found." });
-    }
-
-    const comment = {
-      author,
-      text,
-      createdAt: new Date(),
-    };
-
-    await itemCollection.updateOne(
-      { _id: new ObjectId(id) },
-      { $push: { comments: comment } }
-    );
-
-    res.status(201).json(comment);
-  } catch (error) {
-    console.error("Error adding comment:", error);
-    res.status(500).json({ message: "Error adding comment." });
-  }
-});
-
-// Graceful shutdown
-process.on("SIGINT", async () => {
-  try {
-    await client.close();
-    console.log("MongoDB connection closed.");
-    process.exit(0);
-  } catch (err) {
-    console.error("Error closing MongoDB connection:", err);
-    process.exit(1);
-  }
-});
-
-connectToDB().then(() => {
-  // Start the server
-  app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
-  });
+// Start server and connect to DB
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+  connectToDB();
 });

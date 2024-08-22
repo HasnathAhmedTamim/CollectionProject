@@ -12,12 +12,10 @@ const Navbar = () => {
   return (
     <nav className="bg-gray-800 text-white shadow-md">
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-        {/* Logo or Brand Name */}
         <div className="text-2xl font-bold">
           <Link to="/">My Collection</Link>
         </div>
 
-        {/* Mobile Menu Button */}
         <button
           onClick={toggleMenu}
           className="text-white md:hidden"
@@ -39,7 +37,6 @@ const Navbar = () => {
           </svg>
         </button>
 
-        {/* Navigation Links */}
         <div
           className={`md:flex md:space-x-4 ${
             isOpen ? "flex-col" : "hidden"
@@ -57,6 +54,14 @@ const Navbar = () => {
           >
             Collections
           </Link>
+          {user && (
+            <Link
+              to="/dashboard"
+              className="block py-2 px-4 text-gray-300 hover:text-gray-400"
+            >
+              Dashboard
+            </Link>
+          )}
           {!user ? (
             <>
               <Link
